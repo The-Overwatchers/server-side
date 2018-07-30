@@ -9,7 +9,7 @@ const PORT = process.env.PORT;
 const conString = process.env.DATABASE_URL;
 const client = new pg.Client(conString);
 const igdb = require('igdb-api-node').default;
-const igdbClient = igdb();
+const igdbClient = igdb(process.env.IGDB_API_KEY);
 
 client.connect();
 client.on('error', err => {
@@ -23,15 +23,16 @@ app.use(cors());
 app.get('/api/v1/games/:name', (request, response) => {
   igdbClient.games({
     fields: '*', // Return all fields
-    limit: 5, // Limit to 5 results
+    limit: 25, // Limit to 5 results
     search: `${request.params.name}`
   }, [
       'name'
-  ])
-    .then(result => response.send(result.body))
+  ]).then(result => {
+      return response.send(result.body)})
     .catch(error => {
       throw error;
   });
+  
 })
 
 
