@@ -1,0 +1,26 @@
+{
+  "name": "server-side",
+  "version": "1.0.0",
+  "description": "This project will allow users to search for games using an API call",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/The-Overwatchers/server-side.git"
+  },
+  "author": "Ben Harris, Cheyna Humphries, and Max McFarland",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/The-Overwatchers/server-side/issues"
+  },
+  "homepage": "https://github.com/The-Overwatchers/server-side#readme",
+  "dependencies": {
+    "cors": "^2.8.4",
+    "express": "^4.16.3",
+    "nodemon": "^1.18.3",
+    "pg": "^7.4.3"
+  }
+}
