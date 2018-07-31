@@ -7,13 +7,13 @@ game_inspector
 # STANDALONE TABLES
 CREATE TABLE users(
   id SERIAL PRIMARY KEY,
-  username VARCHAR(50),
+  username VARCHAR(50)
 );
 
 CREATE TABLE games(
   id SERIAL PRIMARY KEY,
   name VARCHAR(128),
-  igdb_id INTEGER,
+  igdb_id INTEGER
 );
 
 # ASSOCIATIVE TABLES
