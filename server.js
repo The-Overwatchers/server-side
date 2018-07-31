@@ -21,6 +21,7 @@ app.use(cors());
 
 
 app.get('/api/v1/games/:name', (request, response) => {
+  console.log('The search function is hitting')
   igdbClient.games({
     fields: '*', // Return all fields
     limit: 25, // Limit to 5 results
@@ -35,6 +36,26 @@ app.get('/api/v1/games/:name', (request, response) => {
   
 })
 
+app.get('/api/v1/game-description/:id', (request, response) => {
+  console.log(request.params.id);
+  igdbClient.games({
+    ids: [
+        request.params.id
+    ]
+}, [
+    'name',
+    'cover',
+    'summary',
+    'genres',
+    'publishers',
+    'platforms'
+]).then(result => {
+      return response.send(result.body)})
+    .catch(error => {
+      throw error;
+  });
+  
+})
 
 
 app.get('*', (req, res) => {
