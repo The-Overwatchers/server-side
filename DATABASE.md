@@ -1,27 +1,26 @@
-# NOTES
+# DATABASE PLANs
 Create three tables: (1) users, (2) games, and (3) users_movies. The third table is an association table (a.k.a. junction table) which can be used to store the user's favorite selections. 
 
 # DATABASE
 game_inspector
 
-# TABLES
+# STANDALONE TABLES
 CREATE TABLE users(
   id SERIAL PRIMARY KEY,
   username VARCHAR(50),
-  favorites INTEGER
 );
 
 CREATE TABLE games(
   id SERIAL PRIMARY KEY,
-  game VARCHAR(128),
-  genre VARCHAR(64),
-  
+  name VARCHAR(128),
+  igdb_id INTEGER,
 );
 
+# ASSOCIATIVE TABLES
 CREATE TABLE users_games(
   id SERIAL PRIMARY KEY,
-  user_id INTEGER FOREIGN KEY,
-  games_id INTEGER FOREIGN KEY
+  users_id INTEGER,
+  games_id INTEGER
 );
 
 # INSERT INTO TABLE
