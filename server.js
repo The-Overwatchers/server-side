@@ -1,4 +1,5 @@
-'use strict';
+'use strict'
+
 
 const express = require('express');
 const cors = require('cors');
@@ -26,52 +27,53 @@ app.get('/api/v1/games/:name', (request, response) => {
     limit: 3, // Limit to 5 results
     search: `${request.params.name}`
   }, [
-    'name'
+      'name'
   ]).then(result => {
-    return response.send(result.body)})
+      return response.send(result.body)})
     .catch(error => {
       console.error(error);
-    });
-
+  });
+  
 })
 
 app.get('/api/v1/game-description/:id', (request, response) => {
-  console.log(request.params.id);
-  // MAX -- make an object to hold all game info, then append the various things that need to be requested (platforms, genres, etc.) from their respective igdb databases
-  let gameInfo = {};
-  igdbClient.games({
-    ids: [
-      request.params.id
-    ]
+    console.log(request.params.id);
+    // MAX -- make an object to hold all game info, then append the various things that need to be requested (platforms, genres, etc.) from their respective igdb databases
+    let gameInfo = {};
+    igdbClient.games({
+      ids: [
+          request.params.id
+      ]
   }, [
-    'name',
-    'cover',
-    'summary',
-    'genres',
-    'themes',
-    'publishers',
-    'platforms'
+      'name',
+      'cover',
+      'summary',
+      'genres',
+      'themes',
+      'publishers',
+      'platforms'
   ])
     .then(result => {
-      console.log(result.body[0].publishers)
-      igdbClient.companies({
-        ids: result.body[0].publishers
+        console.log(result.body[0].publishers)
+        igdbClient.companies({
+          ids: result.body[0].publishers
       }, [
-        'name'
+          'name'
       ])
         .then(publisherNames => {
           console.log(publisherNames)
-          result.body[0].publishers = []
+          result.body[0].publishersDisplay = []
           publisherNames.body.forEach((element, index) => {
-            result.body[0].publishers.push(publisherNames.body[index].name)
+            result.body[0].publishersDisplay.push(publisherNames.body[index].name)
           })
           console.log(result.body[0].publishers)
-          return response.send(result.body)})
-        .catch(error => {
-          console.error(error);
-        });
-    })
-})
+          
+        return response.send(result.body)})})
+      .catch(error => {
+      console.error(error);
+  });
+  })
+
 
 app.get('/api/v1/user/register', (request, response) => {
   let SQL = 'SELECT * FROM users WHERE username=$1';
@@ -106,9 +108,31 @@ app.get('/api/v1/user/login', (request, response) => {
     })
 })
 
+//<--------------------------MAX--------------------------------->
+// This should be called by a function that pulls all favorited games by a user, 
+// runs through the logic to find the most common genres, theme, and platform, 
+// stores each of those in an object as arrays, then sends the request.
+//<--------------------------MAX--------------------------------->
 
-app.get('*', (request, response) => {
-  response.status(404).send('File Not Found!');
+app.get('/api/v1/favorite', (request, response) => {
+  console.log('The favorite function is hitting')
+  igdbClient.games({
+    fields: '*', // Return all fields
+    limit: 5, // Limit to 5 results
+    genres: request.body.genre, 
+    themes: request.body.themes,
+    platforms: request.body.platforms
+  }, [
+      'name'
+  ]).then(result => {
+      return response.send(result.body)})
+    .catch(error => {
+      console.error(error);
+  });
+})
+
+app.get('*', (req, res) => {
+  res.status(404).send('File Not Found!');
 });
 
 app.listen(PORT, () => console.log(`Listening on port: ${PORT}`));
