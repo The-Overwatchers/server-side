@@ -74,36 +74,51 @@ app.get('/api/v1/game-description/:id', (request, response) => {
   });
   })
 
-
-app.get('/api/v1/user/register', (request, response) => {
+// User Registration
+app.get('/api/v1/user/register/:name', (request, response) => {
+  console.log(request.params);
   let SQL = 'SELECT * FROM users WHERE username=$1';
-  let values = [request.body.userName];
+  let values = [request.params.name];
 
   client.query(SQL, values)
     .then(results => {
-      if(!results) {
+      console.log(results.rowCount);
+      if(!results.rowCount) {
         let SQL = 'INSERT INTO users (username) VALUES($1)';
         client.query(SQL, values)
-          .then(results => {
-            response.send(results)
-          })
+          .then(results => { // eslint-disable-line
+            console.log(results);
+            response.send({
+              success: 1,
+              string: 'Username created!'
+            });
+          });
       } else {
-        response.send('User name already taken') // check response here
+        response.send({
+          success: 0,
+          string: 'Username already taken. Please choose another.'
+        });
       }
-
     })
 })
 
-app.get('/api/v1/user/login', (request, response) => {
+// User Login
+app.get('/api/v1/user/login/:name', (request, response) => {
   let SQL = 'SELECT * FROM users WHERE username=$1';
-  let values = [request.body.userName];
+  let values = [request.params.name];
 
   client.query(SQL, values)
     .then(results => {
-      if(!!results) {
-        response.send(results);
+      if(!!results.rowCount) {
+        response.send({
+          success: 1,
+          string: `Sucessfully logged in as ${request.params.name}`
+        });
       } else {
-        response.error('You must create a user name');
+        response.send({
+          success: 0,
+          string: `The username '${request.params.name}' does not exist. Please register or try again.`
+        });
       }
     })
 })
