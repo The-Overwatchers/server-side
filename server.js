@@ -112,7 +112,8 @@ app.get('/api/v1/user/login/:name', (request, response) => {
       if(!!results.rowCount) {
         response.send({
           success: 1,
-          string: `Sucessfully logged in as ${request.params.name}`
+          string: `Sucessfully logged in as ${request.params.name}`,
+          myName: request.params.name
         });
       } else {
         response.send({
