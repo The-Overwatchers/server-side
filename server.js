@@ -115,36 +115,62 @@ app.get('/api/v1/user/login/:name', (request, response) => {
     })
 })
 
-app.post('/api/v1/favorite', (request, response) => {
-  console.log(request.body);
-  console.log(request.params);
-  let SQL = 'INSERT INTO games (name, igdb_id) VALUES ($1, $2);'; // putting game name in game database
-  let values = [request.body.name, request.body.igdb_id];
+app.post('/api/v1/favorite', express.urlencoded(), (request, response) => {
+  let SQL0 = 'SELECT id FROM games WHERE igdb_id=$1;';
+  let values0 = [request.body.igdb_id];
 
-  client.query(SQL, values)
-    .then(results => {
+  client.query(SQL0, values0)
+    .then(results0 => {
+      if(results0.rows[0] === undefined) {
+        let SQL1 = 'INSERT INTO games (name, igdb_id) VALUES ($1, $2);'; // putting game name in game database
+        let values1 = [request.body.name, request.body.igdb_id];
+        client.query(SQL1, values1);
+      }
+    })
+
+    .then(results1 => {
       let SQL2 = 'SELECT id FROM games WHERE name=$1;';
       let values2 = [request.body.name];
-      
+
       client.query(SQL2, values2)
-        .then(results => {
-          request.body.gameTableId = results;
+        .then(results2 => {
+          request.body.gameTableId = results2.rows[0].id;
           let SQL3 = 'SELECT id FROM users WHERE username=$1;';
           let values3 = [request.body.user];
 
           client.query(SQL3, values3)
-            .then(results => {
-              let SQL4 = 'INSERT INTO users_games (users_id, games_id) VALUES ($1, $2);';
-              let values4 = [results, request.body.gameTableId];
-
-              client.query(SQL4, values4);
+            .then(results3 => {
+              let SQL4 = 'SELECT * FROM users_games WHERE users_id=$1 AND games_id=$2;';
+              let values4 = [results3.rows[0].id, request.body.gameTableId];
+              client.query(SQL4, values4)
+                .then(results4 => {
+                  if(results4.rows[0] === undefined) {
+                    let SQL5 = 'INSERT INTO users_games (users_id, games_id) VALUES ($1, $2);';
+                    let values5 = [results3.rows[0].id, request.body.gameTableId];
+                    client.query(SQL5, values5);
+                    return true;
+                  } else {
+                    return false;
+                  }
+                })
+                .then(results5 => {response.send({
+                  success: results5,
+                  string: 'Favorite succeeded'
+                })})
+                .catch(error => {
+                  console.error(error);
+                });
             })
             .catch(error => {
               console.error(error);
             });
+        })
+        .catch(error => {
+          console.error(error);
         });
-      //SQL selecting new game in database, return ID
-      // SQL input the gameID/nameID into many2many table
+    })
+    .catch(error => {
+      console.error(error);
     });
 });
 
