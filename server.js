@@ -21,73 +21,64 @@ app.use(cors());
 
 
 app.get('/api/v1/games/:name', (request, response) => {
-  console.log('The search function is hitting')
   igdbClient.games({
     fields: '*', // Return all fields
     limit: 3, // Limit to 5 results
     search: `${request.params.name}`
   }, [
-      'name'
+    'name'
   ]).then(result => {
-      return response.send(result.body)})
+    return response.send(result.body)})
     .catch(error => {
       console.error(error);
-  });
+    });
   
 })
 
 app.get('/api/v1/game-description/:id', (request, response) => {
-    console.log(request.params.id);
-    // MAX -- make an object to hold all game info, then append the various things that need to be requested (platforms, genres, etc.) from their respective igdb databases
-    let gameInfo = {};
-    igdbClient.games({
-      ids: [
-          request.params.id
-      ]
+  // MAX -- make an object to hold all game info, then append the various things that need to be requested (platforms, genres, etc.) from their respective igdb databases
+  let gameInfo = {};
+  igdbClient.games({
+    ids: [
+      request.params.id
+    ]
   }, [
-      'name',
-      'cover',
-      'summary',
-      'genres',
-      'themes',
-      'publishers',
-      'platforms'
+    'name',
+    'cover',
+    'summary',
+    'genres',
+    'themes',
+    'publishers',
+    'platforms'
   ])
     .then(result => {
-        console.log(result.body[0].publishers)
-        igdbClient.companies({
-          ids: result.body[0].publishers
+      igdbClient.companies({
+        ids: result.body[0].publishers
       }, [
-          'name'
+        'name'
       ])
         .then(publisherNames => {
-          console.log(publisherNames)
           result.body[0].publishersDisplay = []
           publisherNames.body.forEach((element, index) => {
             result.body[0].publishersDisplay.push(publisherNames.body[index].name)
-          })
-          console.log(result.body[0].publishers)
-          
-        return response.send(result.body)})})
-      .catch(error => {
+          })          
+          return response.send(result.body)})})
+    .catch(error => {
       console.error(error);
-  });
-  })
+    });
+})
 
 // User Registration
 app.get('/api/v1/user/register/:name', (request, response) => {
-  console.log(request.params);
   let SQL = 'SELECT * FROM users WHERE username=$1';
   let values = [request.params.name];
 
   client.query(SQL, values)
     .then(results => {
-      console.log(results.rowCount);
       if(!results.rowCount) {
         let SQL = 'INSERT INTO users (username) VALUES($1)';
         client.query(SQL, values)
           .then(results => { // eslint-disable-line
-            console.log(results);
             response.send({
               success: 1,
               string: 'Username created!'
@@ -124,6 +115,40 @@ app.get('/api/v1/user/login/:name', (request, response) => {
     })
 })
 
+app.post('/api/v1/favorite', (request, response) => {
+  console.log(request.body);
+  console.log(request.params);
+  let SQL = 'INSERT INTO games (name, igdb_id) VALUES ($1, $2);'; // putting game name in game database
+  let values = [request.body.name, request.body.igdb_id];
+
+  client.query(SQL, values)
+    .then(results => {
+      let SQL2 = 'SELECT id FROM games WHERE name=$1;';
+      let values2 = [request.body.name];
+      
+      client.query(SQL2, values2)
+        .then(results => {
+          request.body.gameTableId = results;
+          let SQL3 = 'SELECT id FROM users WHERE username=$1;';
+          let values3 = [request.body.user];
+
+          client.query(SQL3, values3)
+            .then(results => {
+              let SQL4 = 'INSERT INTO users_games (users_id, games_id) VALUES ($1, $2);';
+              let values4 = [results, request.body.gameTableId];
+
+              client.query(SQL4, values4);
+            })
+            .catch(error => {
+              console.error(error);
+            });
+        });
+      //SQL selecting new game in database, return ID
+      // SQL input the gameID/nameID into many2many table
+    });
+});
+
+
 //<--------------------------MAX--------------------------------->
 // This should be called by a function that pulls all favorited games by a user, 
 // runs through the logic to find the most common genres, theme, and platform, 
@@ -139,12 +164,12 @@ app.get('/api/v1/favorite', (request, response) => {
     themes: request.body.themes,
     platforms: request.body.platforms
   }, [
-      'name'
+    'name'
   ]).then(result => {
-      return response.send(result.body)})
+    return response.send(result.body)})
     .catch(error => {
       console.error(error);
-  });
+    });
 })
 
 app.get('*', (req, res) => {
