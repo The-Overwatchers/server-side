@@ -21,7 +21,6 @@ app.use(cors());
 
 
 app.get('/api/v1/games/:name', (request, response) => {
-  console.log('The search function is hitting')
   igdbClient.games({
     fields: '*', // Return all fields
     limit: 3, // Limit to 5 results
@@ -37,7 +36,6 @@ app.get('/api/v1/games/:name', (request, response) => {
 })
 
 app.get('/api/v1/game-description/:id', (request, response) => {
-  console.log(request.params.id);
   // MAX -- make an object to hold all game info, then append the various things that need to be requested (platforms, genres, etc.) from their respective igdb databases
   let gameInfo = {};
   igdbClient.games({
@@ -54,20 +52,16 @@ app.get('/api/v1/game-description/:id', (request, response) => {
     'platforms'
   ])
     .then(result => {
-      console.log(result.body[0].publishers)
       igdbClient.companies({
         ids: result.body[0].publishers
       }, [
         'name'
       ])
         .then(publisherNames => {
-          console.log(publisherNames)
           result.body[0].publishersDisplay = []
           publisherNames.body.forEach((element, index) => {
             result.body[0].publishersDisplay.push(publisherNames.body[index].name)
-          })
-          console.log(result.body[0].publishers)
-          
+          })          
           return response.send(result.body)})})
     .catch(error => {
       console.error(error);
@@ -76,18 +70,15 @@ app.get('/api/v1/game-description/:id', (request, response) => {
 
 // User Registration
 app.get('/api/v1/user/register/:name', (request, response) => {
-  console.log(request.params);
   let SQL = 'SELECT * FROM users WHERE username=$1';
   let values = [request.params.name];
 
   client.query(SQL, values)
     .then(results => {
-      console.log(results.rowCount);
       if(!results.rowCount) {
         let SQL = 'INSERT INTO users (username) VALUES($1)';
         client.query(SQL, values)
           .then(results => { // eslint-disable-line
-            console.log(results);
             response.send({
               success: 1,
               string: 'Username created!'
@@ -124,7 +115,9 @@ app.get('/api/v1/user/login/:name', (request, response) => {
     })
 })
 
-app.post('api/v1/favorites/:name', (request, response) => {
+app.post('/api/v1/favorite', (request, response) => {
+  console.log(request.body);
+  console.log(request.params);
   let SQL = 'INSERT INTO games (name, igdb_id) VALUES ($1, $2);'; // putting game name in game database
   let values = [request.body.name, request.body.igdb_id];
 
