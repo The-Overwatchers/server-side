@@ -10,13 +10,12 @@ const conString = process.env.DATABASE_URL;
 const client = new pg.Client(conString);
 const igdb = require('igdb-api-node').default;
 const igdbClient = igdb(process.env.IGDB_API_KEY);
-
+console.log(conString);
 client.connect();
 client.on('error', err => {
   console.error(err);
 });
 app.use(cors());
-
 
 
 
@@ -84,7 +83,7 @@ app.get('/api/v1/user/register/:name', (request, response) => {
     .then(results => {
       console.log(results.rowCount);
       if(!results.rowCount) {
-        let SQL = 'INSERT INTO users (username) VALUES($1)';
+        let SQL = 'INSERT INTO users(username) VALUES($1)';
         client.query(SQL, values)
           .then(results => { // eslint-disable-line
             console.log(results);
@@ -100,6 +99,7 @@ app.get('/api/v1/user/register/:name', (request, response) => {
         });
       }
     })
+    .catch(console.error)
 })
 
 // User Login
