@@ -16,6 +16,8 @@ client.on('error', err => {
   console.error(err);
 });
 app.use(cors());
+app.use(express.json())
+app.use(express.urlencoded({extended: true}))
 
 
 
@@ -100,11 +102,13 @@ app.get('/api/v1/user/login/:name', (request, response) => {
 
   client.query(SQL, values)
     .then(results => {
+      console.log(results);
       if(!!results.rowCount) {
         response.send({
           success: 1,
           string: `Sucessfully logged in as ${request.params.name}`,
-          myName: request.params.name
+          myName: request.params.name,
+          userId: results.rows[0].id
         });
       } else {
         response.send({
@@ -115,7 +119,8 @@ app.get('/api/v1/user/login/:name', (request, response) => {
     })
 })
 
-app.post('/api/v1/favorite', express.urlencoded(), (request, response) => {
+// Add Favorite
+app.post('/api/v1/favorite', (request, response) => {
   let SQL0 = 'SELECT id FROM games WHERE igdb_id=$1;';
   let values0 = [request.body.igdb_id];
 
@@ -174,6 +179,63 @@ app.post('/api/v1/favorite', express.urlencoded(), (request, response) => {
     });
 });
 
+// Remove Favorite
+app.get('/api/v1/favorite/:id', (request, response) => {
+  let SQL = `
+    SELECT games.igdb_id
+    FROM games INNER JOIN users_games ON games.id = users_games.games_id 
+    WHERE users_games.users_id=$1;`;
+  let values = [request.params.id];
+
+  client.query(SQL, values)
+    .then(result1 => {
+      console.log(result1); 
+      let favoriteIds = [];
+      result1.rows.forEach(element => {
+        favoriteIds.push(element.igdb_id);
+      });
+      console.log(favoriteIds);
+      igdbClient.games({
+        ids: favoriteIds
+      }, [ 
+        'cover'
+      ])
+        .then(result3 => {
+          console.log(result3);
+          response.send(result3.body);
+        })
+        .catch(error => {
+          console.error(error);
+        });
+
+    }).catch(error => {
+      console.error(error);
+    });
+});
+
+app.delete('/api/v1/favorite/delete', (request, response) =>{
+  let SQL1 = 'SELECT id FROM games WHERE igdb_id=$1';
+  let values1 = [request.body.id];
+
+  client.query(SQL1, values1)
+    .then(result => {
+      let SQL2 = 'DELETE FROM users_games WHERE users_id=$1 AND games_id=$2;';
+      let values2 = [request.body.user, result.rows[0].id];
+
+      client.query(SQL2, values2)
+        .then(result2 => {
+          response.send('successfully deleted');
+        })
+        .catch(error => {
+          console.error(error);
+        });
+    })
+    .catch(error => {
+      console.error(error);
+    });
+
+  response.send('delete function is hitting');
+});
 
 //<--------------------------MAX--------------------------------->
 // This should be called by a function that pulls all favorited games by a user, 
@@ -181,22 +243,22 @@ app.post('/api/v1/favorite', express.urlencoded(), (request, response) => {
 // stores each of those in an object as arrays, then sends the request.
 //<--------------------------MAX--------------------------------->
 
-app.get('/api/v1/favorite', (request, response) => {
-  console.log('The favorite function is hitting')
-  igdbClient.games({
-    fields: '*', // Return all fields
-    limit: 5, // Limit to 5 results
-    genres: request.body.genre, 
-    themes: request.body.themes,
-    platforms: request.body.platforms
-  }, [
-    'name'
-  ]).then(result => {
-    return response.send(result.body)})
-    .catch(error => {
-      console.error(error);
-    });
-})
+// app.get('/api/v1/favorite', (request, response) => {
+//   console.log('The favorite function is hitting')
+//   igdbClient.games({
+//     fields: '*', // Return all fields
+//     limit: 5, // Limit to 5 results
+//     genres: request.body.genre, 
+//     themes: request.body.themes,
+//     platforms: request.body.platforms
+//   }, [
+//     'name'
+//   ]).then(result => {
+//     return response.send(result.body)})
+//     .catch(error => {
+//       console.error(error);
+//     });
+// })
 
 app.get('*', (req, res) => {
   res.status(404).send('File Not Found!');
