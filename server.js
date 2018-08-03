@@ -1,5 +1,4 @@
-'use strict'
-
+'use strict';
 
 const express = require('express');
 const cors = require('cors');
@@ -16,16 +15,14 @@ client.on('error', err => {
   console.error(err);
 });
 app.use(cors());
-app.use(express.json())
-app.use(express.urlencoded({extended: true}))
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
-
-
-
+// Results View
 app.get('/api/v1/games/:name', (request, response) => {
   igdbClient.games({
     fields: '*', // Return all fields
-    limit: 3, // Limit to 5 results
+    limit: 7, // Limit to 5 results
     search: `${request.params.name}`
   }, [
     'name'
@@ -34,11 +31,10 @@ app.get('/api/v1/games/:name', (request, response) => {
     .catch(error => {
       console.error(error);
     });
-  
-})
+});
 
+// Game Description
 app.get('/api/v1/game-description/:id', (request, response) => {
-  // MAX -- make an object to hold all game info, then append the various things that need to be requested (platforms, genres, etc.) from their respective igdb databases
   let gameInfo = {};
   igdbClient.games({
     ids: [
@@ -60,15 +56,18 @@ app.get('/api/v1/game-description/:id', (request, response) => {
         'name'
       ])
         .then(publisherNames => {
-          result.body[0].publishersDisplay = []
+          console.log(publisherNames);
+          result.body[0].publishersDisplay = [];
           publisherNames.body.forEach((element, index) => {
-            result.body[0].publishersDisplay.push(publisherNames.body[index].name)
-          })          
-          return response.send(result.body)})})
+            result.body[0].publishersDisplay.push(publisherNames.body[index].name);
+          });
+          return response.send(result.body);
+        });
+    })
     .catch(error => {
       console.error(error);
     });
-})
+});
 
 // User Registration
 app.get('/api/v1/user/register/:name', (request, response) => {
@@ -92,8 +91,8 @@ app.get('/api/v1/user/register/:name', (request, response) => {
           string: 'Username already taken. Please choose another.'
         });
       }
-    })
-})
+    });
+});
 
 // User Login
 app.get('/api/v1/user/login/:name', (request, response) => {
@@ -179,7 +178,7 @@ app.post('/api/v1/favorite', (request, response) => {
     });
 });
 
-// Remove Favorite
+// Display Favorites
 app.get('/api/v1/favorite/:id', (request, response) => {
   let SQL = `
     SELECT games.igdb_id
@@ -189,7 +188,7 @@ app.get('/api/v1/favorite/:id', (request, response) => {
 
   client.query(SQL, values)
     .then(result1 => {
-      console.log(result1); 
+      console.log(result1);
       let favoriteIds = [];
       result1.rows.forEach(element => {
         favoriteIds.push(element.igdb_id);
@@ -213,6 +212,7 @@ app.get('/api/v1/favorite/:id', (request, response) => {
     });
 });
 
+// Delete Favorites
 app.delete('/api/v1/favorite/delete', (request, response) =>{
   let SQL1 = 'SELECT id FROM games WHERE igdb_id=$1';
   let values1 = [request.body.id];
@@ -243,8 +243,37 @@ app.delete('/api/v1/favorite/delete', (request, response) =>{
 // stores each of those in an object as arrays, then sends the request.
 //<--------------------------MAX--------------------------------->
 
-// app.get('/api/v1/favorite', (request, response) => {
-//   console.log('The favorite function is hitting')
+// app.post('/api/v1/reccomend', (request, response) => {
+//   console.log('The favorite function is hitting');
+//   igdbClient.games({
+//     ids: request.params
+//   }, [
+//     'genres',
+//     'platforms',
+//     'themes'
+//   ]).then(result => {
+
+
+//     function findMode(numbers) {
+//       let counted = numbers.reduce((acc, curr) => { 
+//           if (curr in acc) {
+//               acc[curr]++;
+//           } else {
+//               acc[curr] = 1;
+//           }
+//           return acc;
+//       }, {});
+  
+//       let mode = Object.keys(counted).reduce((a, b) => counted[a] > counted[b] ? a : b);
+//       return mode;
+//   }
+//   });
+
+// });
+
+
+
+
 //   igdbClient.games({
 //     fields: '*', // Return all fields
 //     limit: 5, // Limit to 5 results
@@ -258,7 +287,7 @@ app.delete('/api/v1/favorite/delete', (request, response) =>{
 //     .catch(error => {
 //       console.error(error);
 //     });
-// })
+// });
 
 app.get('*', (req, res) => {
   res.status(404).send('File Not Found!');
