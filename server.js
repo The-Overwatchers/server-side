@@ -18,13 +18,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-app.get('/', (request, response) => {
-  const body = "ROUTES: /api/v1/games/{Searched Game} \n /api/v1/game-description/{IGDB Game ID}"
-  return response.send(body)
-});
-
-
-// Results View
+// General Lookup: This only returns the game name and igdb ID.
 app.get('/api/v1/games/:name', (request, response) => {
   igdbClient.games({
     fields: '*', // Return all fields
@@ -39,7 +33,7 @@ app.get('/api/v1/games/:name', (request, response) => {
     });
 });
 
-// Game Description
+// Game Description: This gets a verbose description of the game, as well as various attributes
 app.get('/api/v1/game-description/:id', (request, response) => {
   let gameInfo = {};
   igdbClient.games({
@@ -74,7 +68,7 @@ app.get('/api/v1/game-description/:id', (request, response) => {
     });
 });
 
-// User Registration
+// User Registration: This checks if a username has already been created. 
 app.get('/api/v1/user/register/:name', (request, response) => {
   let SQL = 'SELECT * FROM users WHERE username=$1';
   let values = [request.params.name];
@@ -99,7 +93,7 @@ app.get('/api/v1/user/register/:name', (request, response) => {
     });
 });
 
-// User Login
+// Login feature
 app.get('/api/v1/user/login/:name', (request, response) => {
   let SQL = 'SELECT * FROM users WHERE username=$1';
   let values = [request.params.name];
@@ -122,7 +116,8 @@ app.get('/api/v1/user/login/:name', (request, response) => {
     })
 })
 
-// Add Favorite
+// Add Favorite: This adds a game into the games table, and creates a new relation in the 
+// many-to-many table, which acts as the "favorites" table.
 app.post('/api/v1/favorite', (request, response) => {
   let SQL0 = 'SELECT id FROM games WHERE igdb_id=$1;';
   let values0 = [request.body.igdb_id];
@@ -182,7 +177,8 @@ app.post('/api/v1/favorite', (request, response) => {
     });
 });
 
-// Display Favorites
+// Display Favorites: This retrieves the favorites from the many-to-many table associated with
+// the user that sent the request.
 app.get('/api/v1/favorite/:id', (request, response) => {
   let SQL = `
     SELECT games.igdb_id
@@ -213,9 +209,9 @@ app.get('/api/v1/favorite/:id', (request, response) => {
     });
 });
 
-
+// Recommend Feature: This retrieves all of the game attributes from a users favorites. 
+// This information is sent to the client side, where the logic is run. 
 app.get('/api/v1/recommend/:id', (request, response) => {
-
   let SQL = `
     SELECT games.igdb_id, games.themes, games.genres, games.publishers
     FROM games INNER JOIN users_games ON games.id = users_games.games_id 
@@ -229,11 +225,8 @@ app.get('/api/v1/recommend/:id', (request, response) => {
   }
   )
   
-//<--------------------------MAX--------------------------------->
-// This should be called by a function that pulls all favorited games by a user, 
-// runs through the logic to find the most common genres, theme, and platform, 
-// stores each of those in an object as arrays, then sends the request.
-//<--------------------------MAX--------------------------------->
+// Reccomend API call: This sends an api call to the IGDB client based off the
+// attributes calculated by the client-side logic.
 app.post('/api/v1/recommend', (request, response) => {
   igdbClient.games({
     filters: {
