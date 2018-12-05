@@ -130,8 +130,8 @@ app.post('/api/v1/favorite', (request, response) => {
   client.query(SQL0, values0)
     .then(results0 => {
       if(results0.rows[0] === undefined) {
-        let SQL1 = 'INSERT INTO games (name, igdb_id, themes, genres) VALUES ($1, $2, $3, $4);'; // putting game name in game database
-        let values1 = [request.body.name, request.body.igdb_id, request.body.themes, request.body.genres];
+        let SQL1 = 'INSERT INTO games (name, igdb_id, themes, genres, publishers) VALUES ($1, $2, $3, $4, $5);'; // putting game name in game database
+        let values1 = [request.body.name, request.body.igdb_id, request.body.themes, request.body.genres, request.body.publishers];
         client.query(SQL1, values1);
       }
     })
@@ -217,7 +217,7 @@ app.get('/api/v1/favorite/:id', (request, response) => {
 app.get('/api/v1/recommend/:id', (request, response) => {
 
   let SQL = `
-    SELECT games.igdb_id, games.themes, games.genres
+    SELECT games.igdb_id, games.themes, games.genres, games.publishers
     FROM games INNER JOIN users_games ON games.id = users_games.games_id 
     WHERE users_games.users_id=$1;`;
   let values = [request.params.id];
@@ -227,13 +227,19 @@ app.get('/api/v1/recommend/:id', (request, response) => {
       response.send(result1.rows)}
     ).catch(console.error)
   }
-)
-
+  )
+  
+//<--------------------------MAX--------------------------------->
+// This should be called by a function that pulls all favorited games by a user, 
+// runs through the logic to find the most common genres, theme, and platform, 
+// stores each of those in an object as arrays, then sends the request.
+//<--------------------------MAX--------------------------------->
 app.post('/api/v1/recommend', (request, response) => {
   igdbClient.games({
     filters: {
-      'genres': `${request.body.genre}`,
-      'themes': `${request.body.theme}`,
+      'genres-eq': `${request.body.genre}`,
+      'themes-eq': `${request.body.theme}`,
+      'publishers-eq': `${request.body.publisher}`
     },
     fields: '*', // Return all fields
     order: 'rating:desc',
@@ -244,9 +250,10 @@ app.post('/api/v1/recommend', (request, response) => {
     'rating',
   ])
   .then(result => {
-    response.send(result.body)
+    console.log(result);
+    response.send(result.body);
   })
-  }
+}
 )
 
 // Delete Favorites
@@ -274,57 +281,7 @@ app.delete('/api/v1/favorite/delete', (request, response) =>{
   response.send('delete function is hitting');
 });
 
-//<--------------------------MAX--------------------------------->
-// This should be called by a function that pulls all favorited games by a user, 
-// runs through the logic to find the most common genres, theme, and platform, 
-// stores each of those in an object as arrays, then sends the request.
-//<--------------------------MAX--------------------------------->
 
-// app.post('/api/v1/reccomend', (request, response) => {
-//   console.log('The favorite function is hitting');
-//   igdbClient.games({
-//     ids: request.params
-//   }, [
-//     'genres',
-//     'platforms',
-//     'themes'
-//   ]).then(result => {
-
-
-//     function findMode(numbers) {
-//       let counted = numbers.reduce((acc, curr) => { 
-//           if (curr in acc) {
-//               acc[curr]++;
-//           } else {
-//               acc[curr] = 1;
-//           }
-//           return acc;
-//       }, {});
-  
-//       let mode = Object.keys(counted).reduce((a, b) => counted[a] > counted[b] ? a : b);
-//       return mode;
-//   }
-//   });
-
-// });
-
-
-
-
-//   igdbClient.games({
-//     fields: '*', // Return all fields
-//     limit: 5, // Limit to 5 results
-//     genres: request.body.genre, 
-//     themes: request.body.themes,
-//     platforms: request.body.platforms
-//   }, [
-//     'name'
-//   ]).then(result => {
-//     return response.send(result.body)})
-//     .catch(error => {
-//       console.error(error);
-//     });
-// });
 
 app.get('*', (req, res) => {
   res.status(404).send('File Not Found!');
