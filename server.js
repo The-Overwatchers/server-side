@@ -18,11 +18,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
+app.get('/', (request, response) => {
+  const body = "ROUTES: /api/v1/games/{Searched Game} \n /api/v1/game-description/{IGDB Game ID}"
+  return response.send(body)
+});
+
+
 // Results View
 app.get('/api/v1/games/:name', (request, response) => {
   igdbClient.games({
     fields: '*', // Return all fields
-    limit: 7, // Limit to 5 results
+    limit: 7, // Limit to 7 results
     search: `${request.params.name}`
   }, [
     'name'
@@ -56,7 +62,6 @@ app.get('/api/v1/game-description/:id', (request, response) => {
         'name'
       ])
         .then(publisherNames => {
-          console.log(publisherNames);
           result.body[0].publishersDisplay = [];
           publisherNames.body.forEach((element, index) => {
             result.body[0].publishersDisplay.push(publisherNames.body[index].name);
@@ -101,7 +106,6 @@ app.get('/api/v1/user/login/:name', (request, response) => {
 
   client.query(SQL, values)
     .then(results => {
-      console.log(results);
       if(!!results.rowCount) {
         response.send({
           success: 1,
@@ -126,8 +130,8 @@ app.post('/api/v1/favorite', (request, response) => {
   client.query(SQL0, values0)
     .then(results0 => {
       if(results0.rows[0] === undefined) {
-        let SQL1 = 'INSERT INTO games (name, igdb_id) VALUES ($1, $2);'; // putting game name in game database
-        let values1 = [request.body.name, request.body.igdb_id];
+        let SQL1 = 'INSERT INTO games (name, igdb_id, themes, genres) VALUES ($1, $2, $3, $4);'; // putting game name in game database
+        let values1 = [request.body.name, request.body.igdb_id, request.body.themes, request.body.genres];
         client.query(SQL1, values1);
       }
     })
@@ -188,19 +192,16 @@ app.get('/api/v1/favorite/:id', (request, response) => {
 
   client.query(SQL, values)
     .then(result1 => {
-      console.log(result1);
       let favoriteIds = [];
       result1.rows.forEach(element => {
         favoriteIds.push(element.igdb_id);
       });
-      console.log(favoriteIds);
       igdbClient.games({
         ids: favoriteIds
       }, [ 
         'cover'
       ])
         .then(result3 => {
-          console.log(result3);
           response.send(result3.body);
         })
         .catch(error => {
@@ -211,6 +212,42 @@ app.get('/api/v1/favorite/:id', (request, response) => {
       console.error(error);
     });
 });
+
+
+app.get('/api/v1/recommend/:id', (request, response) => {
+
+  let SQL = `
+    SELECT games.igdb_id, games.themes, games.genres
+    FROM games INNER JOIN users_games ON games.id = users_games.games_id 
+    WHERE users_games.users_id=$1;`;
+  let values = [request.params.id];
+
+  client.query(SQL, values)
+    .then(result1 => {
+      response.send(result1.rows)}
+    ).catch(console.error)
+  }
+)
+
+app.post('/api/v1/recommend', (request, response) => {
+  igdbClient.games({
+    filters: {
+      'genres': `${request.body.genre}`,
+      'themes': `${request.body.theme}`,
+    },
+    fields: '*', // Return all fields
+    order: 'rating:desc',
+    order: 'rating_count:desc',
+    limit: 7, // Limit to 7 results
+  }, [
+    'name',
+    'rating',
+  ])
+  .then(result => {
+    response.send(result.body)
+  })
+  }
+)
 
 // Delete Favorites
 app.delete('/api/v1/favorite/delete', (request, response) =>{
