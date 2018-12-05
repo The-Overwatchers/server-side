@@ -18,11 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-// Results View
+// General Lookup: This only returns the game name and igdb ID.
 app.get('/api/v1/games/:name', (request, response) => {
   igdbClient.games({
     fields: '*', // Return all fields
-    limit: 7, // Limit to 5 results
+    limit: 7, // Limit to 7 results
     search: `${request.params.name}`
   }, [
     'name'
@@ -33,7 +33,7 @@ app.get('/api/v1/games/:name', (request, response) => {
     });
 });
 
-// Game Description
+// Game Description: This gets a verbose description of the game, as well as various attributes
 app.get('/api/v1/game-description/:id', (request, response) => {
   let gameInfo = {};
   igdbClient.games({
@@ -56,7 +56,6 @@ app.get('/api/v1/game-description/:id', (request, response) => {
         'name'
       ])
         .then(publisherNames => {
-          console.log(publisherNames);
           result.body[0].publishersDisplay = [];
           publisherNames.body.forEach((element, index) => {
             result.body[0].publishersDisplay.push(publisherNames.body[index].name);
@@ -69,7 +68,7 @@ app.get('/api/v1/game-description/:id', (request, response) => {
     });
 });
 
-// User Registration
+// User Registration: This checks if a username has already been created. 
 app.get('/api/v1/user/register/:name', (request, response) => {
   let SQL = 'SELECT * FROM users WHERE username=$1';
   let values = [request.params.name];
@@ -94,14 +93,13 @@ app.get('/api/v1/user/register/:name', (request, response) => {
     });
 });
 
-// User Login
+// Login feature
 app.get('/api/v1/user/login/:name', (request, response) => {
   let SQL = 'SELECT * FROM users WHERE username=$1';
   let values = [request.params.name];
 
   client.query(SQL, values)
     .then(results => {
-      console.log(results);
       if(!!results.rowCount) {
         response.send({
           success: 1,
@@ -118,7 +116,8 @@ app.get('/api/v1/user/login/:name', (request, response) => {
     })
 })
 
-// Add Favorite
+// Add Favorite: This adds a game into the games table, and creates a new relation in the 
+// many-to-many table, which acts as the "favorites" table.
 app.post('/api/v1/favorite', (request, response) => {
   let SQL0 = 'SELECT id FROM games WHERE igdb_id=$1;';
   let values0 = [request.body.igdb_id];
@@ -126,8 +125,8 @@ app.post('/api/v1/favorite', (request, response) => {
   client.query(SQL0, values0)
     .then(results0 => {
       if(results0.rows[0] === undefined) {
-        let SQL1 = 'INSERT INTO games (name, igdb_id) VALUES ($1, $2);'; // putting game name in game database
-        let values1 = [request.body.name, request.body.igdb_id];
+        let SQL1 = 'INSERT INTO games (name, igdb_id, themes, genres, publishers) VALUES ($1, $2, $3, $4, $5);'; // putting game name in game database
+        let values1 = [request.body.name, request.body.igdb_id, request.body.themes, request.body.genres, request.body.publishers];
         client.query(SQL1, values1);
       }
     })
@@ -178,7 +177,8 @@ app.post('/api/v1/favorite', (request, response) => {
     });
 });
 
-// Display Favorites
+// Display Favorites: This retrieves the favorites from the many-to-many table associated with
+// the user that sent the request.
 app.get('/api/v1/favorite/:id', (request, response) => {
   let SQL = `
     SELECT games.igdb_id
@@ -188,19 +188,16 @@ app.get('/api/v1/favorite/:id', (request, response) => {
 
   client.query(SQL, values)
     .then(result1 => {
-      console.log(result1);
       let favoriteIds = [];
       result1.rows.forEach(element => {
         favoriteIds.push(element.igdb_id);
       });
-      console.log(favoriteIds);
       igdbClient.games({
         ids: favoriteIds
       }, [ 
         'cover'
       ])
         .then(result3 => {
-          console.log(result3);
           response.send(result3.body);
         })
         .catch(error => {
@@ -211,6 +208,46 @@ app.get('/api/v1/favorite/:id', (request, response) => {
       console.error(error);
     });
 });
+
+// Recommend Feature: This retrieves all of the game attributes from a users favorites. 
+// This information is sent to the client side, where the logic is run. 
+app.get('/api/v1/recommend/:id', (request, response) => {
+  let SQL = `
+    SELECT games.igdb_id, games.themes, games.genres, games.publishers
+    FROM games INNER JOIN users_games ON games.id = users_games.games_id 
+    WHERE users_games.users_id=$1;`;
+  let values = [request.params.id];
+
+  client.query(SQL, values)
+    .then(result1 => {
+      response.send(result1.rows)}
+    ).catch(console.error)
+  }
+  )
+  
+// Reccomend API call: This sends an api call to the IGDB client based off the
+// attributes calculated by the client-side logic.
+app.post('/api/v1/recommend', (request, response) => {
+  igdbClient.games({
+    filters: {
+      'genres-eq': `${request.body.genre}`,
+      'themes-eq': `${request.body.theme}`,
+      'publishers-eq': `${request.body.publisher}`
+    },
+    fields: '*', // Return all fields
+    order: 'rating:desc',
+    order: 'rating_count:desc',
+    limit: 7, // Limit to 7 results
+  }, [
+    'name',
+    'rating',
+  ])
+  .then(result => {
+    console.log(result);
+    response.send(result.body);
+  })
+}
+)
 
 // Delete Favorites
 app.delete('/api/v1/favorite/delete', (request, response) =>{
@@ -237,57 +274,7 @@ app.delete('/api/v1/favorite/delete', (request, response) =>{
   response.send('delete function is hitting');
 });
 
-//<--------------------------MAX--------------------------------->
-// This should be called by a function that pulls all favorited games by a user, 
-// runs through the logic to find the most common genres, theme, and platform, 
-// stores each of those in an object as arrays, then sends the request.
-//<--------------------------MAX--------------------------------->
 
-// app.post('/api/v1/reccomend', (request, response) => {
-//   console.log('The favorite function is hitting');
-//   igdbClient.games({
-//     ids: request.params
-//   }, [
-//     'genres',
-//     'platforms',
-//     'themes'
-//   ]).then(result => {
-
-
-//     function findMode(numbers) {
-//       let counted = numbers.reduce((acc, curr) => { 
-//           if (curr in acc) {
-//               acc[curr]++;
-//           } else {
-//               acc[curr] = 1;
-//           }
-//           return acc;
-//       }, {});
-  
-//       let mode = Object.keys(counted).reduce((a, b) => counted[a] > counted[b] ? a : b);
-//       return mode;
-//   }
-//   });
-
-// });
-
-
-
-
-//   igdbClient.games({
-//     fields: '*', // Return all fields
-//     limit: 5, // Limit to 5 results
-//     genres: request.body.genre, 
-//     themes: request.body.themes,
-//     platforms: request.body.platforms
-//   }, [
-//     'name'
-//   ]).then(result => {
-//     return response.send(result.body)})
-//     .catch(error => {
-//       console.error(error);
-//     });
-// });
 
 app.get('*', (req, res) => {
   res.status(404).send('File Not Found!');
