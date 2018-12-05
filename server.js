@@ -243,7 +243,6 @@ app.post('/api/v1/recommend', (request, response) => {
     'rating',
   ])
   .then(result => {
-    console.log(result);
     response.send(result.body);
   })
 }
